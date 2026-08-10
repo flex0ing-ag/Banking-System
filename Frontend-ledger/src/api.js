@@ -1,4 +1,4 @@
-const BASE_URL = "/api";
+const BASE_URL = "https://banking-system-hpf1.onrender.com/api";
 
 async function request(path, options = {}) {
   const response = await fetch(`${BASE_URL}${path}`, options);
@@ -80,8 +80,23 @@ export async function createTransaction(payload, token) {
   });
 }
 
-export async function getTransactions(token) {
-  return request("/transactions/", {
+export async function getTransactions(token, params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return request(`/transactions/${query ? `?${query}` : ""}`, {
+    method: "GET",
+    headers: getAuthHeaders(token),
+  });
+}
+
+export async function getDashboardSummary(token) {
+  return request("/accounts/dashboard-summary", {
+    method: "GET",
+    headers: getAuthHeaders(token),
+  });
+}
+
+export async function getAnalytics(token) {
+  return request("/transactions/analytics", {
     method: "GET",
     headers: getAuthHeaders(token),
   });

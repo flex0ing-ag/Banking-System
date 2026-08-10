@@ -3,6 +3,8 @@ import * as api from "../api";
 
 export default function Dashboard({ user, token }) {
   const [accounts, setAccounts] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [balance, setBalance] = useState(null);
   const [selectedAccount, setSelectedAccount] = useState("");
@@ -11,19 +13,20 @@ export default function Dashboard({ user, token }) {
   useEffect(() => {
     if (!token) return;
 
-    api
-      .getAccounts(token)
-      .then((data) => {
-        setAccounts(data.accounts || []);
-        setLoading(false);
-        if (data.accounts?.length > 0) {
-          setSelectedAccount(data.accounts[0]._id);
+    Promise.all([api.getAccounts(token), api.getDashboardSummary(token), api.getAnalytics(token)])
+      .then(([accountsData, summaryData, analyticsData]) => {
+        const accountList = accountsData.accounts || [];
+        setAccounts(accountList);
+        setSummary(summaryData.summary || null);
+        setAnalytics(analyticsData.analytics || null);
+        if (accountList.length > 0) {
+          setSelectedAccount(accountList[0]._id);
         }
       })
       .catch((err) => {
         setError(err.message);
-        setLoading(false);
-      });
+      })
+      .finally(() => setLoading(false));
   }, [token]);
 
   useEffect(() => {
@@ -58,7 +61,7 @@ export default function Dashboard({ user, token }) {
           ) : (
             <ul className="account-list">
               {accounts.map((account) => (
-                <li key={account._id}>{account._id} <strong>• {account.currency}</strong></li>
+                <li key={account._id}>{account.accountName || account._id} <strong>• {account.type || account.currency}</strong></li>
               ))}
             </ul>
           )}
@@ -72,7 +75,7 @@ export default function Dashboard({ user, token }) {
             Select account
             <select value={selectedAccount} onChange={(e) => setSelectedAccount(e.target.value)}>
               {accounts.map((account) => (
-                <option key={account._id} value={account._id}>{account._id}</option>
+                <option key={account._id} value={account._id}>{account.accountName || account._id}</option>
               ))}
             </select>
           </label>
@@ -82,6 +85,35 @@ export default function Dashboard({ user, token }) {
           </div>
         </div>
       </div>
+      {summary && (
+        <div className="metric-grid" style={{ marginTop: "1rem" }}>
+          <div className="metric-card">
+            <span>Total balance</span>
+            <strong>{summary.totalBalance}</strong>
+          </div>
+          <div className="metric-card">
+            <span>Income</span>
+            <strong>{summary.income}</strong>
+          </div>
+          <div className="metric-card">
+            <span>Expenses</span>
+            <strong>{summary.expense}</strong>
+          </div>
+        </div>
+      )}
+      {analytics?.series?.length > 0 && (
+        <div className="dashboard-panel" style={{ marginTop: "1rem" }}>
+          <div className="panel-heading">
+            <h2>Cash flow</h2>
+            <span className="eyebrow">Trend</span>
+          </div>
+          <ul className="account-list">
+            {analytics.series.map((item) => (
+              <li key={item.month}>{item.month}: income {item.income} / expense {item.expense}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
