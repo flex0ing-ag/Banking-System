@@ -5,9 +5,20 @@ const ledgerModel = require("../models/ledger.model");
 
 async function createAccountController(req, res) {
   const user = req.user;
+  const { accountName, type, isPrimary } = req.body;
+
+  if (isPrimary) {
+    await accountModel.updateMany(
+      { user: user._id, isPrimary: true },
+      { $set: { isPrimary: false } },
+    );
+  }
 
   const account = await accountModel.create({
     user: user._id,
+    accountName,
+    type,
+    isPrimary: Boolean(isPrimary),
   });
 
   res.status(201).json({
@@ -51,6 +62,111 @@ async function getAccountBalanceController(req, res) {
   res.status(200).json({
     accountId: account._id,
     balance: balance,
+  });
+}
+
+async function getDashboardSummaryController(req, res) {
+  const accounts = await accountModel.find({ user: req.user._id });
+  const accountIds = accounts.map((account) => account._id);
+
+  const balances = await Promise.all(
+    accounts.map(async (account) => ({
+      accountId: account._id,
+      balance: await account.getBalance(),
+    })),
+  );
+
+  const totalBalance = balances.reduce((sum, item) => sum + item.balance, 0);
+  const primaryAccount =
+    accounts.find((account) => account.isPrimary) || accounts[0] || null;
+
+  const transactions = await transactionModel.find({
+    $or: [
+      { fromAccount: { $in: accountIds } },
+      { toAccount: { $in: accountIds } },
+    ],
+    status: "COMPLETED",
+  });
+
+  const income = transactions
+    .filter((transaction) =>
+      accountIds.some(
+        (id) => id.toString() === transaction.toAccount.toString(),
+      ),
+    )
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+  const expense = transactions
+    .filter((transaction) =>
+      accountIds.some(
+        (id) => id.toString() === transaction.fromAccount.toString(),
+      ),
+    )
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+  const currentMonth = new Date();
+  const previousMonth = new Date(
+    currentMonth.getFullYear(),
+    currentMonth.getMonth() - 1,
+    1,
+  );
+  const currentMonthTransactions = transactions.filter((transaction) => {
+    const createdAt = new Date(transaction.createdAt);
+    return (
+      createdAt.getFullYear() === currentMonth.getFullYear() &&
+      createdAt.getMonth() === currentMonth.getMonth()
+    );
+  });
+  const previousMonthTransactions = transactions.filter((transaction) => {
+    const createdAt = new Date(transaction.createdAt);
+    return (
+      createdAt.getFullYear() === previousMonth.getFullYear() &&
+      createdAt.getMonth() === previousMonth.getMonth()
+    );
+  });
+
+  const currentMonthNet = currentMonthTransactions.reduce(
+    (sum, transaction) => {
+      const isIncoming = accountIds.some(
+        (id) => id.toString() === transaction.toAccount.toString(),
+      );
+      return sum + (isIncoming ? transaction.amount : -transaction.amount);
+    },
+    0,
+  );
+
+  const previousMonthNet = previousMonthTransactions.reduce(
+    (sum, transaction) => {
+      const isIncoming = accountIds.some(
+        (id) => id.toString() === transaction.toAccount.toString(),
+      );
+      return sum + (isIncoming ? transaction.amount : -transaction.amount);
+    },
+    0,
+  );
+
+  res.status(200).json({
+    summary: {
+      accountCount: accounts.length,
+      totalBalance,
+      income,
+      expense,
+      monthlyChange: currentMonthNet - previousMonthNet,
+      primaryAccount: primaryAccount
+        ? {
+            _id: primaryAccount._id,
+            accountName: primaryAccount.accountName,
+            type: primaryAccount.type,
+            isPrimary: primaryAccount.isPrimary,
+            balance: primaryAccount.isPrimary
+              ? balances.find(
+                  (item) =>
+                    item.accountId.toString() === primaryAccount._id.toString(),
+                )?.balance || 0
+              : 0,
+          }
+        : null,
+    },
   });
 }
 
@@ -127,5 +243,6 @@ module.exports = {
   createAccountController,
   getUserAccountsController,
   getAccountBalanceController,
+  getDashboardSummaryController,
   addBalanceToAccountController,
 };

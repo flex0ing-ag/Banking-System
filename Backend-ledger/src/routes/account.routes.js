@@ -30,6 +30,12 @@ router.get(
  * - GET /api/accounts/balance/:accountId
  */
 router.get(
+  "/dashboard-summary",
+  authMiddleware.authMiddleware,
+  accountController.getDashboardSummaryController,
+);
+
+router.get(
   "/balance/:accountId",
   authMiddleware.authMiddleware,
   accountController.getAccountBalanceController,
