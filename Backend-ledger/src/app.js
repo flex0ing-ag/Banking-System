@@ -12,7 +12,7 @@ app.use(
     origin: [
       "http://localhost:4173",
       "http://localhost:5173",
-      "https://banking-system-393v92ji0-ansrkghamirpur-gmailcoms-projects.vercel.app/",
+      "https://banking-system-393v92ji0-ansrkghamirpur-gmailcoms-projects.vercel.app",
     ],
     credentials: true,
   })
