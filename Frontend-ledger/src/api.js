@@ -1,4 +1,6 @@
-const BASE_URL = "https://banking-system-hpf1.onrender.com/api";
+const BASE_URL = (
+  import.meta.env.VITE_API_URL || "https://banking-system-hpf1.onrender.com/api"
+).replace(/\/+$/, "");
 
 async function request(path, options = {}) {
   const response = await fetch(`${BASE_URL}${path}`, options);

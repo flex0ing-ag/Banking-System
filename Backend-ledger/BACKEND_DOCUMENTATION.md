@@ -52,6 +52,7 @@ The backend expects these environment variables in `.env`:
 - `CLIENT_ID` — Gmail OAuth2 client ID.
 - `CLIENT_SECRET` — Gmail OAuth2 client secret.
 - `REFRESH_TOKEN` — Gmail OAuth2 refresh token.
+- `FRONTEND_URL` — optional comma-separated frontend origin allowlist for CORS.
 
 ## Authentication
 

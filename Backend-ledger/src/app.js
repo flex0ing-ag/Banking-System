@@ -3,19 +3,24 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
 const app = express();
+const allowedOrigins = [
+  "http://localhost:4173",
+  "http://localhost:5173",
+  "https://banking-system-393v92ji0-ansrkghamirpur-gmailcoms-projects.vercel.app",
+  "https://banking-system-tau-sooty.vercel.app",
+  ...(process.env.FRONTEND_URL || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
 
 app.use(express.json());
 app.use(cookieParser());
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:4173",
-      "http://localhost:5173",
-      "https://banking-system-393v92ji0-ansrkghamirpur-gmailcoms-projects.vercel.app",
-      "https://banking-system-tau-sooty.vercel.app"
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
